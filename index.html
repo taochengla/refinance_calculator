@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Refinance Comparison</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header>
+    <h1>Refinance Comparison</h1>
+    <p><strong>How the mortgage math works:</strong></p>
+    <p>
+      Your loan is paid off by making the <strong>same monthly payment</strong> until the balance reaches zero.
+      Each month the amounts are updated using these simple formulas:
+      <br>
+      <code>interest = balance * rate</code>,
+      <br>
+      <code>principal_paid = payment - interest</code>,
+      <br>
+      <code>new_balance = balance - principal_paid</code>.
+    </p>
+  </header>
+
+  <main>
+    <form id="loan-form">
+      <fieldset>
+        <legend>Loan details</legend>
+        <div class="form-grid">
+          <label for="principal">Remaining loan balance ($)</label>
+          <input type="number" id="principal" name="principal" min="1" step="0.01" required value="250000" placeholder="e.g. 250000">
+
+          <label for="current-payment">Current monthly payment ($)</label>
+          <input type="number" id="current-payment" name="current-payment" min="0.01" step="0.01" required value="1800" placeholder="e.g. 1500">
+
+          <label for="current-rate">Current interest rate (annual %)</label>
+          <input type="number" id="current-rate" name="current-rate" min="0" step="0.125" required value="6.75" placeholder="e.g. 6.5">
+
+          <label for="refi-rate">Interest rate after refinance (annual %)</label>
+          <input type="number" id="refi-rate" name="refi-rate" min="0" step="0.125" required value="5.75" placeholder="e.g. 5.5">
+        </div>
+        <button type="submit">Calculate</button>
+      </fieldset>
+    </form>
+
+    <div id="error-message" class="error-message" role="alert" hidden></div>
+
+    <section id="comparison-section" class="comparison-section" hidden>
+      <h2>Comparison summary</h2>
+      <p class="schedule-meta">
+        These comparisons assume you keep the <strong>same monthly payment</strong> as before refinancing,
+        so you can see an “apples to apples” difference in total payment, total interest, and payoff time.
+      </p>
+      <div id="comparison-bars" class="comparison-bars" aria-label="Bar chart comparison summary"></div>
+    </section>
+
+    <section id="comparison-table-section" class="schedule-section" hidden>
+      <h2>First 12 months comparison (Before vs After)</h2>
+      <p class="schedule-meta" id="comparison-table-meta"></p>
+      <div class="table-wrap">
+        <table id="comparison-table" class="schedule-table" aria-label="Amortization comparison (first 12 months)">
+          <thead>
+            <tr>
+              <th>Month</th>
+              <th>Payment</th>
+              <th>Principal (Before)</th>
+              <th>Principal (After)</th>
+              <th>Interest (Before)</th>
+              <th>Interest (After)</th>
+              <th>Balance (Before)</th>
+              <th>Balance (After)</th>
+            </tr>
+          </thead>
+          <tbody id="comparison-table-body"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="balance-chart-section" class="schedule-section" hidden>
+      <h2>Balance over time</h2>
+      <p class="schedule-meta">Loan balance each month before and after refinancing.</p>
+      <div id="balance-chart-container" class="chart-container" aria-label="Balance over time line chart"></div>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+</body>
+</html>
