@@ -2,6 +2,7 @@
   'use strict';
 
   const COMPARISON_MONTHS = 12;
+  const MAX_PAYOFF_MONTHS = 30 * 12; // 30 years
 
   function formatCurrency(n) {
     return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(n);
@@ -67,6 +68,10 @@
       });
     }
 
+    if (month > MAX_PAYOFF_MONTHS) {
+      return { error: 'Payoff time would exceed 30 years. Increase monthly payment or check inputs.' };
+    }
+
     const totalInterest = totalPayment - principal;
     return { schedule, totalPayment, totalInterest, months: month };
   }
@@ -78,6 +83,17 @@
     row.innerHTML =
       `<div class="bar-label">${label}</div>` +
       `<div class="bar-track"><div class="bar-fill ${kind}" style="width:${safePct}%;"></div></div>` +
+      `<div class="bar-value">${valueText}</div>`;
+    return row;
+  }
+
+  function renderBarRowStacked(label, segments, valueText) {
+    const row = document.createElement('div');
+    row.className = 'bar-row';
+    const fills = segments.map(s => `<div class="bar-fill ${s.kind}" style="width:${s.pct}%;"></div>`).join('');
+    row.innerHTML =
+      `<div class="bar-label">${label}</div>` +
+      `<div class="bar-track bar-track-stacked">${fills}</div>` +
       `<div class="bar-value">${valueText}</div>`;
     return row;
   }
@@ -106,13 +122,54 @@
     container.appendChild(metric);
   }
 
-  function renderComparisonBars(beforeRes, afterRes) {
+  function renderTotalPaymentMetric(container, beforeTotal, afterTotal, refiCost) {
+    const metric = document.createElement('div');
+    metric.className = 'metric';
+
+    const b = Number.isFinite(beforeTotal) ? beforeTotal : 0;
+    const afterPayment = Number.isFinite(afterTotal) ? afterTotal : 0;
+    const cost = Number.isFinite(refiCost) && refiCost >= 0 ? refiCost : 0;
+    const totalAfter = afterPayment + cost;
+    const max = Math.max(b, totalAfter, 0);
+
+    const beforePct = max > 0 ? (b / max) * 100 : 0;
+    const afterPaymentPct = max > 0 ? (afterPayment / max) * 100 : 0;
+    const refiCostPct = max > 0 ? (cost / max) * 100 : 0;
+
+    const left = document.createElement('div');
+    left.className = 'metric-title';
+    left.textContent = 'Total payment';
+    if (cost > 0) {
+      const hint = document.createElement('div');
+      hint.className = 'metric-hint';
+      hint.textContent = 'Orange = refinance cost';
+      left.appendChild(hint);
+    }
+
+    const bars = document.createElement('div');
+    bars.className = 'metric-bars';
+    bars.appendChild(renderBarRow('Before', beforePct, formatCurrency(beforeTotal), 'before'));
+    if (cost > 0) {
+      bars.appendChild(renderBarRowStacked('After', [
+        { kind: 'after', pct: afterPaymentPct },
+        { kind: 'refi-cost', pct: refiCostPct }
+      ], formatCurrency(totalAfter)));
+    } else {
+      bars.appendChild(renderBarRow('After', totalAfter > 0 ? (totalAfter / max) * 100 : 0, formatCurrency(totalAfter), 'after'));
+    }
+
+    metric.appendChild(left);
+    metric.appendChild(bars);
+    container.appendChild(metric);
+  }
+
+  function renderComparisonBars(beforeRes, afterRes, refiCost) {
     const container = document.getElementById('comparison-bars');
     container.innerHTML = '';
 
-    renderMetric(container, 'Total payment', beforeRes.totalPayment, afterRes.totalPayment, formatCurrency);
+    renderTotalPaymentMetric(container, beforeRes.totalPayment, afterRes.totalPayment, refiCost);
     renderMetric(container, 'Total interest', beforeRes.totalInterest, afterRes.totalInterest, formatCurrency);
-    renderMetric(container, 'Months to payoff', beforeRes.months, afterRes.months, formatYearsMonths);
+    renderMetric(container, 'Time to payoff', beforeRes.months, afterRes.months, formatYearsMonths);
     renderMetric(
       container,
       'First month interest',
@@ -172,6 +229,7 @@
     const currentPayment = Number(document.getElementById('current-payment').value);
     const currentRate = Number(document.getElementById('current-rate').value);
     const refiRate = Number(document.getElementById('refi-rate').value);
+    const refiCost = Number(document.getElementById('refi-cost').value) || 0;
 
     if (principal <= 0 || currentPayment <= 0) {
       showError('Remaining balance and current monthly payment must be positive.');
@@ -179,6 +237,10 @@
     }
     if (currentRate < 0 || refiRate < 0) {
       showError('Interest rates must be non-negative.');
+      return;
+    }
+    if (refiCost < 0) {
+      showError('Refinance cost cannot be negative.');
       return;
     }
 
@@ -196,12 +258,38 @@
     document.getElementById('comparison-table-section').hidden = false;
     document.getElementById('balance-chart-section').hidden = false;
 
-    renderComparisonBars(beforeRes, afterRes);
+    const breakEvenMonth = refiCost > 0 ? getBreakEvenMonth(beforeRes, afterRes, refiCost) : null;
+
+    const breakEvenEl = document.getElementById('break-even-summary');
+    if (breakEvenMonth != null) {
+      breakEvenEl.textContent = `Refinance cost break-even at month ${breakEvenMonth} (cumulative interest savings cover the refinance cost).`;
+      breakEvenEl.hidden = false;
+    } else {
+      breakEvenEl.hidden = true;
+    }
+
+    renderComparisonBars(beforeRes, afterRes, refiCost);
     renderFirst12ComparisonTable(beforeRes, afterRes);
-    renderBalanceChart(beforeRes, afterRes, principal);
+    renderBalanceChart(beforeRes, afterRes, principal, breakEvenMonth);
   }
 
-  function renderBalanceChart(beforeRes, afterRes, principal) {
+  /**
+   * First month (1-based) when cumulative interest savings (before - after) >= refiCost, or null if never.
+   */
+  function getBreakEvenMonth(beforeRes, afterRes, refiCost) {
+    if (!beforeRes.schedule || !afterRes.schedule || refiCost <= 0) return null;
+    let cumulative = 0;
+    const maxMonths = Math.max(beforeRes.schedule.length, afterRes.schedule.length);
+    for (let m = 0; m < maxMonths; m += 1) {
+      const interestBefore = beforeRes.schedule[m] ? beforeRes.schedule[m].interest : 0;
+      const interestAfter = afterRes.schedule[m] ? afterRes.schedule[m].interest : 0;
+      cumulative += interestBefore - interestAfter;
+      if (cumulative >= refiCost) return m + 1;
+    }
+    return null;
+  }
+
+  function renderBalanceChart(beforeRes, afterRes, principal, breakEvenMonth) {
     const container = document.getElementById('balance-chart-container');
     container.innerHTML = '';
 
@@ -320,6 +408,27 @@
 
     g.appendChild(makePath(balancesBefore, '#2980b9'));
     g.appendChild(makePath(balancesAfter, '#27ae60'));
+
+    if (breakEvenMonth != null && breakEvenMonth >= 1 && breakEvenMonth <= months) {
+      const x = scaleX(breakEvenMonth);
+      const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
+      line.setAttribute('x1', x);
+      line.setAttribute('y1', 0);
+      line.setAttribute('x2', x);
+      line.setAttribute('y2', chartHeight);
+      line.setAttribute('stroke', '#c0392b');
+      line.setAttribute('stroke-width', '1.5');
+      line.setAttribute('stroke-dasharray', '4,4');
+      g.appendChild(line);
+      const label = document.createElementNS('http://www.w3.org/2000/svg', 'text');
+      label.setAttribute('x', x);
+      label.setAttribute('y', -6);
+      label.setAttribute('text-anchor', 'middle');
+      label.setAttribute('font-size', '10');
+      label.setAttribute('fill', '#c0392b');
+      label.textContent = `Break-even (month ${breakEvenMonth})`;
+      g.appendChild(label);
+    }
 
     const legend = document.createElementNS('http://www.w3.org/2000/svg', 'g');
     legend.setAttribute('transform', `translate(${chartWidth - 150}, 4)`);

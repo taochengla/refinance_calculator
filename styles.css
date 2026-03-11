@@ -136,6 +136,13 @@ button[type="submit"]:hover {
   font-size: 0.95rem;
 }
 
+.metric-hint {
+  font-weight: normal;
+  font-size: 0.8rem;
+  color: #777;
+  margin-top: 0.2rem;
+}
+
 .metric-bars {
   display: grid;
   gap: 0.5rem;
@@ -160,10 +167,27 @@ button[type="submit"]:hover {
   overflow: hidden;
 }
 
+.bar-track-stacked {
+  display: flex;
+}
+
+.bar-track-stacked .bar-fill:first-child {
+  border-radius: 999px 0 0 999px;
+}
+
+.bar-track-stacked .bar-fill:last-child {
+  border-radius: 0 999px 999px 0;
+}
+
+.bar-track-stacked .bar-fill:only-child {
+  border-radius: 999px;
+}
+
 .bar-fill {
   height: 100%;
   width: 0%;
   border-radius: 999px;
+  min-width: 0;
 }
 
 .bar-fill.before {
@@ -172,6 +196,10 @@ button[type="submit"]:hover {
 
 .bar-fill.after {
   background: #27ae60;
+}
+
+.bar-fill.refi-cost {
+  background: #e67e22;
 }
 
 .bar-value {
