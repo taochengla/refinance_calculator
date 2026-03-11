@@ -148,6 +148,18 @@ button[type="submit"]:hover {
   gap: 0.5rem;
 }
 
+.metric-delta {
+  margin-top: 0.1rem;
+  font-size: 0.85rem;
+  color: #444;
+  font-variant-numeric: tabular-nums;
+}
+
+.metric-delta-label {
+  color: #666;
+  font-weight: 500;
+}
+
 .bar-row {
   display: grid;
   grid-template-columns: 60px 1fr 140px;

@@ -98,7 +98,20 @@
     return row;
   }
 
-  function renderMetric(container, title, beforeVal, afterVal, formatter) {
+  function formatSignedDelta(diff, absFormatter) {
+    if (typeof diff !== 'number' || !Number.isFinite(diff)) return '—';
+    const sign = diff > 0 ? '+' : diff < 0 ? '−' : '';
+    return `${sign}${absFormatter(Math.abs(diff))}`;
+  }
+
+  function renderDeltaLine(diffText) {
+    const el = document.createElement('div');
+    el.className = 'metric-delta';
+    el.innerHTML = `<span class="metric-delta-label">After − Before:</span> <strong>${diffText}</strong>`;
+    return el;
+  }
+
+  function renderMetric(container, title, beforeVal, afterVal, formatter, deltaAbsFormatter) {
     const metric = document.createElement('div');
     metric.className = 'metric';
 
@@ -116,6 +129,8 @@
     bars.className = 'metric-bars';
     bars.appendChild(renderBarRow('Before', beforePct, formatter(beforeVal), 'before'));
     bars.appendChild(renderBarRow('After', afterPct, formatter(afterVal), 'after'));
+    const deltaFormatter = deltaAbsFormatter || formatter;
+    bars.appendChild(renderDeltaLine(formatSignedDelta(a - b, deltaFormatter)));
 
     metric.appendChild(left);
     metric.appendChild(bars);
@@ -157,6 +172,7 @@
     } else {
       bars.appendChild(renderBarRow('After', totalAfter > 0 ? (totalAfter / max) * 100 : 0, formatCurrency(totalAfter), 'after'));
     }
+    bars.appendChild(renderDeltaLine(formatSignedDelta(totalAfter - b, formatCurrency)));
 
     metric.appendChild(left);
     metric.appendChild(bars);
@@ -169,13 +185,14 @@
 
     renderTotalPaymentMetric(container, beforeRes.totalPayment, afterRes.totalPayment, refiCost);
     renderMetric(container, 'Total interest', beforeRes.totalInterest, afterRes.totalInterest, formatCurrency);
-    renderMetric(container, 'Time to payoff', beforeRes.months, afterRes.months, formatYearsMonths);
+    renderMetric(container, 'Time to payoff', beforeRes.months, afterRes.months, formatYearsMonths, formatYearsMonths);
     renderMetric(
       container,
       'First month interest',
       beforeRes.schedule?.[0]?.interest,
       afterRes.schedule?.[0]?.interest,
-      formatMaybeCurrency
+      formatMaybeCurrency,
+      formatCurrency
     );
   }
 
@@ -189,7 +206,7 @@
       return;
     }
 
-    metaEl.textContent = `Showing months 1–${COMPARISON_MONTHS}. (Payment is the same before and after; we show it once. Before uses current rate; After uses refinance rate.)`;
+    metaEl.textContent = `Showing months 1–${COMPARISON_MONTHS}. (Keep the same monthly payment before and after; Before uses current rate; After uses refinance rate.)`;
 
     const b = beforeRes.schedule;
     const a = afterRes.schedule;
