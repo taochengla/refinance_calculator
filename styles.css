@@ -44,10 +44,24 @@ header h1 {
   box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-header p {
-  margin: 0;
-  opacity: 0.9;
-  font-size: 0.95rem;
+.math-explanation {
+  margin-top: 2rem;
+  background: #fdfdfd;
+}
+
+.math-formulas {
+  padding: 1rem;
+  background: #f0f4f8;
+  border-radius: 6px;
+  border: 1px solid #e1e8ed;
+}
+
+.math-formulas code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+  font-size: 0.9rem;
+  color: #c0392b;
+  display: inline-block;
+  margin-bottom: 0.3rem;
 }
 
 main {

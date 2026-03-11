@@ -15,17 +15,6 @@
       <img src="logo.png" alt="Refinance App Logo" class="header-logo">
       <h1>Refinance Comparison</h1>
     </div>
-    <p><strong>How the mortgage math works:</strong></p>
-    <p>
-      Your loan is paid off by making the <strong>same monthly payment</strong> until the balance reaches zero.
-      Each month the amounts are updated using these simple formulas:
-      <br>
-      <code>interest = balance * rate</code>,
-      <br>
-      <code>principal_paid = payment - interest</code>,
-      <br>
-      <code>new_balance = balance - principal_paid</code>.
-    </p>
   </header>
 
   <main>
@@ -99,6 +88,18 @@
           <tbody id="comparison-table-body"></tbody>
         </table>
       </div>
+    </section>
+    <section class="schedule-section math-explanation">
+      <h2>How the mortgage math works</h2>
+      <p>
+        Your loan is paid off by making the <strong>same monthly payment</strong> until the balance reaches zero.
+        Each month the amounts are updated using these simple formulas:
+      </p>
+      <p class="math-formulas">
+        <code>interest = balance * rate</code><br>
+        <code>principal_paid = payment - interest</code><br>
+        <code>new_balance = balance - principal_paid</code>
+      </p>
     </section>
   </main>
 
